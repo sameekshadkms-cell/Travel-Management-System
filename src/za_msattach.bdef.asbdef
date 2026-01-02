@@ -1,0 +1,8 @@
+abstract;
+strict;
+with hierarchy;
+
+define behavior for ZA_MSATTACH
+{
+ association _StreamProperties with hierarchy;
+}

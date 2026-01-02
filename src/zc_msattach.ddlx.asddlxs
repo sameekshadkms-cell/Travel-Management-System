@@ -1,0 +1,48 @@
+@Metadata.layer: #CORE
+
+@UI.headerInfo: { title: { type: #STANDARD, value: 'FileName' },
+                  typeName: 'Attachment',
+                  typeNamePlural: 'Attachments' }
+
+annotate view ZC_MSATTACH
+    with 
+{
+  @UI.facet: [ { id: 'AttachmentData',
+                 purpose: #STANDARD,
+                 position: 10,
+                 type: #IDENTIFICATION_REFERENCE,
+                 label: 'Attachment Info' } ]
+  @UI.hidden: true
+  AttachUuid;
+
+  @UI.hidden: true
+  TravelUuid;
+
+  @UI.identification: [ { position: 10 } ]
+  @UI.lineItem: [ { position: 10, label: 'Attachment', cssDefault.width: '30em' } ]
+  Attachment;
+
+  @UI.hidden: true
+  MimeType;
+
+  @UI.identification: [ { position: 20, label: 'File Name' } ]
+  @UI.lineItem: [ { position: 20, label: 'File Name', cssDefault.width: '10em' } ]
+  FileName;
+
+  @UI.identification: [ { position: 30 } ]
+  @UI.lineItem: [ { position: 30, label: 'Created By', cssDefault.width: '10em' } ]
+  CreatedBy;
+
+  @UI.identification: [ { position: 40 } ]
+  @UI.lineItem: [ { position: 40, label: 'Created At', cssDefault.width: '20em' } ]
+  CreatedAt;
+
+  @UI.identification: [ { position: 50 } ]
+  LastChangedBy;
+
+  @UI.identification: [ { position: 60 } ]
+  LastChangedAt;
+
+  @UI.identification: [ { position: 70 } ]
+  LocalLastChangedAt;
+}

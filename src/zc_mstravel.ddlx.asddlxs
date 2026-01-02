@@ -1,0 +1,164 @@
+@Metadata.layer: #CORE
+@UI: {
+  headerInfo: { typeName: 'Travel',
+                typeNamePlural: 'Travels',
+                //imageUrl: 'Attachment',
+                typeImageUrl: 'https://cdn-icons-png.flaticon.com/512/5086/5086786.png',
+                title: { type: #STANDARD, value: 'TravelId' },
+                description: { type: #STANDARD ,value: 'Description'}
+              }
+     }
+@UI.chart: [{ qualifier: 'RadialChart',
+              chartType: #BULLET,
+              //title: 'Booking Fee',
+              description: 'Booking Fee',
+              measures: [ 'BookingFee' ],
+              measureAttributes: [{ measure: 'BookingFee', role: #AXIS_1, asDataPoint: true }] }]
+annotate view ZC_MSTRAVEL
+    with 
+    {  
+ @UI.facet: [ { id: 'HeaderTravelPrice',
+                 position: 10,
+                 purpose: #HEADER,
+                 type: #DATAPOINT_REFERENCE,
+                 targetQualifier: 'TotalPriceData' },
+               { id: 'HeaderTravelOverallStatus',
+                 position: 20,
+                 purpose: #HEADER,
+                 type: #DATAPOINT_REFERENCE,
+                 targetQualifier: 'OverallStatusData' },
+               { id: 'HeaderDonutChart',
+                 position: 30,
+                 purpose: #HEADER,
+                 type: #CHART_REFERENCE,
+                 targetQualifier: 'RadialChart' },
+               { label: 'General Information', id: 'GeneralInfo', type: #COLLECTION, position: 10 },
+               { label: 'General',
+                 id: 'General',
+                 purpose: #STANDARD,
+                 position: 10,
+                 type: #IDENTIFICATION_REFERENCE,
+                 parentId: 'GeneralInfo' },
+               { label: 'Prices',
+                 id: 'Prices',
+                 purpose: #STANDARD,
+                 targetQualifier: 'PricesGroup',
+                 position: 20,
+                 type: #FIELDGROUP_REFERENCE,
+                 parentId: 'GeneralInfo' },
+               { label: 'Dates',
+                 id: 'Dates',
+                 purpose: #STANDARD,
+                 targetQualifier: 'DatesGroup',
+                 position: 10,
+                 type: #FIELDGROUP_REFERENCE,
+                 parentId: 'GeneralInfo' },
+               { label: 'Bookings',
+                 id: 'Booking',
+                 purpose: #STANDARD,
+                 type: #LINEITEM_REFERENCE,
+                 position: 20,
+                 targetElement: '_Booking' },
+               { label: 'Attachments',
+                 id: 'Attachment',
+                 purpose: #STANDARD,
+                 type: #LINEITEM_REFERENCE,
+                 position: 30,
+                 targetElement: '_Attachment' },
+               { label: 'Change Log', id: 'Changelogs', type: #COLLECTION, position: 40 },
+               { id: 'Changes',
+                 purpose: #STANDARD,
+                 targetQualifier: 'ChangesGroup',
+                 position: 10,
+                 type: #FIELDGROUP_REFERENCE,
+                 parentId: 'Changelogs' } ]
+  @UI.hidden: true
+  TravelUuid;
+
+  @UI.lineItem: [ { position: 10, label: 'Travel ID', cssDefault.width: '15em' } ]
+  TravelId;
+
+  @UI.identification: [ { position: 20 } ]
+  @UI.lineItem: [ { position: 20, cssDefault.width: '20em' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  AgencyId;
+
+  @UI.identification: [ { position: 30 } ]
+  @UI.lineItem: [ { position: 30, cssDefault.width: '15em' } ]
+  @UI.selectionField: [ { position: 30 } ]
+  CustomerId;
+
+  @UI.fieldGroup: [ { qualifier: 'DatesGroup', position: 10 } ]
+  @UI.lineItem: [ { position: 40, label: 'Starting Date', cssDefault.width: '10em' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  BeginDate;
+
+  @UI.fieldGroup: [ { qualifier: 'DatesGroup', position: 20 } ]
+  @UI.lineItem: [ { position: 50, label: 'End Date', cssDefault.width: '10em' } ]
+  EndDate;
+
+  @UI.dataPoint: { qualifier: 'BookingFee',
+                   minimumValue: 0,
+                   maximumValue: 1500,
+                   targetValueElement: 'TotalPrice',
+                   visualization: #BULLET_CHART,
+                   criticality: 'OverallStatusCriticality' }
+  @UI.fieldGroup: [ { qualifier: 'PricesGroup', position: 10 } ]
+  @UI.lineItem: [ { position: 60, label: 'Booking Fee', cssDefault.width: '10em' } ]
+  BookingFee;
+
+  @UI.dataPoint: { qualifier: 'TotalPriceData', title: 'Total Price' }
+  //@UI.fieldGroup: [ { qualifier: 'PricesGroup', position: 20 } ]
+  @UI.lineItem: [ { position: 70, label: 'Total Price', cssDefault.width: '10em' } ]
+  TotalPrice;
+
+  @UI.hidden : false
+  CurrencyCode;
+
+  @UI.identification: [ { position: 90, label: 'Description' } ]
+  Description;
+
+  @UI.dataPoint: { qualifier: 'OverallStatusData', title: 'Status', criticality: 'OverallStatusCriticality' }
+  @UI.identification: [ { position: 100 },
+                        { type: #FOR_ACTION, dataAction: 'deductDiscount', label: 'Deduct Discount On Booking fees' } ]
+  @UI.lineItem: [ { position: 100, criticality: 'OverallStatusCriticality', importance: #HIGH, cssDefault.width: '10em' },
+                   //type: #FOR_ACTION, dataAction: 'deductdiscount', label: 'Deduct Discount',
+                  { type: #FOR_ACTION, dataAction: 'copyTravel', label: 'Copy Travel' },
+                  { type: #FOR_ACTION, dataAction: 'setstatustoaccepted', label: 'Accept Travel' },
+                  { type: #FOR_ACTION, dataAction: 'setstatustorejected', label: 'Reject Travel' } ]
+  @UI.selectionField: [ { position: 100 } ]
+  @UI.textArrangement: #TEXT_ONLY
+  OverallStatus;
+
+  @UI.hidden: true
+  OverallStatusText;
+
+  //@UI.fieldGroup: [ { qualifier: 'DatesGroup', position: 10 } ]
+  @UI.lineItem: [ { position: 40, label: 'Created on', cssDefault.width: '10em' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  CreatedAt;
+  //@UI.identification: [ { position: 110, label: 'Icon' } ]
+  //Attachment;
+
+  @UI.hidden: true
+  MimeType;
+
+  @UI.hidden: true
+  FileName;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 10 } ]
+  CreatedBy;
+
+  //@UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 20 } ]
+  //CreatedAt;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 30 } ]
+  LastChangedBy;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 40 } ]
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+ 
+}

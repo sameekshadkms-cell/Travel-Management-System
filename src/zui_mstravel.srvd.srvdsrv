@@ -1,0 +1,13 @@
+@EndUserText.label: 'Service Definition for Travel'
+@ObjectModel: {
+  leadingEntity: {
+    name: 'ZC_MSTRAVEL'
+  }
+}
+define service Zui_mstravel
+  provider contracts odata_v4_ui {
+  expose ZC_MSTRAVEL;
+  expose ZC_MSBOOKING;
+  expose ZC_MSATTACH;
+  expose ZC_MSSUPPLEMENT;
+}

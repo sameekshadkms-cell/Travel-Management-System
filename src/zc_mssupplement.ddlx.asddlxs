@@ -1,0 +1,38 @@
+@Metadata.layer: #CORE
+
+@UI.headerInfo: { title: { type: #STANDARD, value: 'SupplementId' },
+                  description: { type: #STANDARD, value: 'SupplementDescription' },
+                  typeName: 'Supplement',
+                  typeNamePlural: 'Supplements' }
+
+annotate view ZC_MSSUPPLEMENT
+    with 
+{
+  @UI.facet: [ { id: 'SupplementData',
+                 purpose: #STANDARD,
+                 position: 10,
+                 type: #IDENTIFICATION_REFERENCE,
+                 label: 'Supplements' } ]
+  SupplementUuid;
+  
+  @UI.hidden: true
+  TravelUuid;
+
+  @UI.hidden: true
+  BookingUuid;
+
+  @UI.identification: [ { position: 10, label: 'Product Id' } ]
+  @UI.lineItem: [ { position: 10, label: 'Product Id', cssDefault.width: '20em' } ]
+  SupplementId;
+
+  @UI.identification: [ { position: 30, label: 'Price' } ]
+  @UI.lineItem: [ { position: 30, label: 'Price', cssDefault.width: '15em' } ]
+  Price;
+
+  @UI.hidden: false
+  CurrencyCode;
+
+  @UI.identification: [ { position: 40 } ]
+  @UI.lineItem: [ { position: 40, cssDefault.width: '20em' } ]
+  LastChangedAt;
+}

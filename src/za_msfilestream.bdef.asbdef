@@ -1,0 +1,7 @@
+abstract;
+strict;
+with hierarchy;
+
+define behavior for ZA_MSFILESTREAM
+{
+}

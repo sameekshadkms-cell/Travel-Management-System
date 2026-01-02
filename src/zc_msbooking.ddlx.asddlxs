@@ -1,0 +1,88 @@
+@Metadata.layer: #CORE
+
+@UI.headerInfo: { title: { type: #STANDARD, value: 'BookingId' },
+                  description: { type: #STANDARD, value: 'AirlineName' },
+                  typeName: 'Booking',
+                  typeNamePlural: 'Bookings' }
+annotate view ZC_MSBOOKING
+    with 
+{
+  @UI.facet: [ { label: 'General Information', id: 'BookingGeneralInfo', type: #COLLECTION, position: 10 },
+               { label: 'Supplements',
+                 id: 'Supplement',
+                 purpose: #STANDARD,
+                 type: #LINEITEM_REFERENCE,
+                 position: 20,
+                 targetElement: '_Supplement' },
+               { label: 'Change Log', id: 'Changelogs', type: #COLLECTION, position: 30 },
+               { id: 'BookingGeneral',
+                 purpose: #STANDARD,
+                 position: 10,
+                 type: #IDENTIFICATION_REFERENCE,
+                 parentId: 'BookingGeneralInfo' },
+               { id: 'Changes',
+                 purpose: #STANDARD,
+                 targetQualifier: 'ChangesGroup',
+                 position: 10,
+                 type: #FIELDGROUP_REFERENCE,
+                 parentId: 'Changelogs' } ]
+ @UI.hidden: true
+  --@UI.identification: [ { type: #FOR_ACTION, dataAction: 'uploadData', label: 'Upload Data' } ]
+  BookingUuid;
+
+  @UI.identification: [ { position: 10, label: 'Booking Number' } ]
+  @UI.lineItem: [ { position: 10, label: 'Booking Number', cssDefault.width: '7em' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  BookingId;
+  //BookingUuid;
+
+  @UI.identification: [ { position: 30, label: 'Booking Date' } ]
+  @UI.lineItem: [ { position: 30, label: 'Booking Date', cssDefault.width: '15em' } ]
+  @UI.selectionField: [ { position: 30 } ]
+  BookingDate;
+
+  @UI.identification: [ { position: 40, label: 'Customer ID' } ]
+  @UI.lineItem: [ { position: 40, label: 'Customer ID', cssDefault.width: '15em' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  CustomerId;
+
+  @UI.identification: [ { position: 50, label: 'Airline ID' } ]
+  @UI.lineItem: [ { position: 50, label: 'Airline ID', cssDefault.width: '40em' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  CarrierId;
+
+  @UI.identification: [ { position: 60, label: 'Flight Number' } ]
+  @UI.lineItem: [ { position: 60, label: 'Flight Number', cssDefault.width: '5em' } ]
+  @UI.selectionField: [ { position: 60 } ]
+  ConnectionId;
+
+  @UI.identification: [ { position: 70, label: 'Flight Date' } ]
+  @UI.lineItem: [ { position: 70, label: 'Flight Date', cssDefault.width: '10em' } ]
+  @UI.selectionField: [ { position: 70 } ]
+  FlightDate;
+
+  @UI.identification: [ { position: 80 } ]
+  @UI.lineItem: [ { position: 80, importance: #HIGH, cssDefault.width: '20em' } ]
+  FlightPrice;
+
+//  @UI.identification: [ { position: 90, label: 'Status' } ]
+//  @UI.lineItem: [ { position: 90, importance: #HIGH, label: 'Status', cssDefault.width: '5em' } ]
+//  @UI.textArrangement: #TEXT_ONLY
+//  BookingStatus;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 10 } ]
+  CreatedBy;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 20 } ]
+  CreatedAt;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 30 } ]
+  LastChangedBy;
+
+  @UI.fieldGroup: [ { qualifier: 'ChangesGroup', position: 40 } ]
+  LastChangedAt;
+
+  @UI.hidden: true
+  LocalLastChangedAt;
+
+}

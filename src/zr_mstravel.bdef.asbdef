@@ -1,0 +1,281 @@
+managed implementation in class zbp_r_mstravel unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZR_MSTRAVEL alias zrmstravel
+persistent table zmstravel
+draft table zmstravel_d
+lock master
+total etag LastChangedAt
+authorization master ( global )
+etag master LocalLastChangedAt
+{
+  field ( numbering : managed, readonly )
+  TravelUuid;
+
+  field ( mandatory )
+  CustomerId,
+  BeginDate,
+  EndDate;
+
+  field ( readonly )
+  TravelId,
+  CreatedBy,
+  CreatedAt,
+  LastChangedBy,
+  LastChangedAt,
+  LocalLastChangedAt;
+
+  association _Booking { create; with draft; }
+  association _Attachment { create; with draft; }
+  create;
+   /* Instance Feature Control can only be Implemented on when an active Instance is available of BO (Business Object),
+   For ex: only on Edit or Delete state of BO.
+   This can not be implemented with create state of business object because until record is not created till
+   that time active Instance is not available of Business Object.
+   */
+
+  /* Feature Control is defined in Behavior Definition. Implementation is done in Class created.
+
+   Action without Feature Control: if an Action is defined without Feature Control then there will not be any difference
+   or change in Action for any state of Business Object or for any field value.
+   Ex: If a Button control is implemented then state and functionality of that button will always be same for all BO Instances.
+
+   Action with Feature Control: If an Action is defined with Feature Control then state of control can be controlled based on BO field value.
+   Ex: Button control can be made enable or disables based on value.
+   To Implement dynamic Feature control we need to implement method "get_instance_features".
+   */
+  update ( precheck, features : instance );
+  delete ( features : instance );
+
+  /* An internal action can only be accessed from the business logic inside the business object implementation
+   such as from a determination or from another action.
+   */
+  internal action ReCalcTotalPrice;
+
+  /* validations - A validation is implicitly invoked by the business object’s framework if the trigger condition
+   of the validation is fulfilled. Trigger conditions can be MODIFY operations and modified fields.
+   The trigger condition is evaluated at the trigger time, a predefined point during the BO runtime. */
+  validation ValidateDates on save { create; field BeginDate, EndDate; }
+  validation ValidateCustomer on save { create; field CustomerId; }
+
+  /* determine action: Determine actions allow the consumer to execute determinations and validations on request.
+   Determinations can be usually triggered as side effects which are triggered automatically when some fields
+   are updated on the application. side effects can only have action, determine action or determination so validation
+   needs to be wrapped as determine action.
+   */
+  determine action ValidateCustomerId { validation ValidateCustomer; }
+  determine action ValidateDateRange { validation ValidateDates; }
+
+  /* determinations - A determination modifies instances of business objects based on trigger conditions.
+   Trigger conditions can be modify operations such as create, update, and delete and modified fields.
+   The determination can calculate field values, modify entity instances and return messages to the
+   consumer by passing them to the corresponding table in the REPORTED structure. */
+  determination SetStatusToOpen on modify { create; }
+  determination SetTravelNumber on save { create; }
+  //Determination to calculate the Total Price when Booking Fee has changed is added.
+//determination ReCalcTotalPrice on modify {field BookingFee, CurrencyCode;}
+determination CalculateTotalPrice on modify {field BookingFee, CurrencyCode, LocalLastChangedAt; }
+//determination recalc_totalprice on modify { delete; }
+
+  /* Side effects are used to trigger data, permission, or message changes based on data changes
+   in UI scenarios with draft-enabled BOs.
+   */
+  // Side Effect to update the UI element Total Price when Booking Fee has changed is added
+  side effects
+  {
+    field BookingFee affects field TotalPrice;
+    determine action ValidateDateRange executed on field BeginDate, field EndDate affects messages;
+    determine action ValidateCustomerId executed on field CustomerId affects messages;
+    entity _Booking affects  field TotalPrice;
+
+  }
+  //actions
+  draft action Activate optimized;
+  draft action Discard;
+  draft action ( features : instance ) Edit;
+  draft action Resume;
+  draft determine action Prepare
+  {
+    validation ValidateDates;
+    validation ValidateCustomer;
+  }
+  action ( features : instance ) SetStatusToAccepted result [1] $self;
+  action ( features : instance ) SetStatusToRejected result [1] $self;
+  action ( features : instance ) DeductDiscount parameter /dmo/a_travel_discount result [1] $self { default function GetDefaultsForDeductDiscount; }
+  factory action CopyTravel [1];
+ mapping for zmstravel
+    {
+      TravelUuid         = travel_uuid;
+      TravelId           = travel_id;
+      AgencyId           = agency_id;
+      CustomerId         = customer_id;
+      BeginDate          = begin_date;
+      EndDate            = end_date;
+      BookingFee         = booking_fee;
+      TotalPrice         = total_price;
+      CurrencyCode       = currency_code;
+      Description        = description;
+      OverallStatus      = overall_status;
+      Attachment         = attachment;
+      MimeType           = mime_type;
+      FileName           = file_name;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LastChangedAt      = last_changed_at;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}
+
+define behavior for ZR_MSBOOKING alias zrmsbooking
+persistent table zmsbooking
+draft table zmsbooking_d
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LocalLastChangedAt
+
+{
+
+  field ( numbering : managed, readonly )
+  BookingUuid;
+
+field (mandatory) ConnectionId;
+
+  field ( readonly )
+  TravelUuid,
+  BookingId,
+  CreatedBy,
+  CreatedAt,
+  LastChangedBy,
+  LastChangedAt,
+  LocalLastChangedAt;
+
+  association _Travel { with draft; }
+  association _Supplement { with draft; create; }
+  update;
+  delete;
+
+  action ( features : instance ) UploadData deep parameter ZA_MSATTACH result [0..*] entity ZR_MSSUPPLEMENT;
+//ReCalcTotalPrice
+
+  //Determination to calculate the Total Price when FlightPrice is changed, a new booking is created, or a booking is deleted
+   determination CalculateTotalPrice on modify { delete; field FlightPrice, CurrencyCode; }
+  // determination  CalculateTotalPrice on modify { create; delete; update; field FlightPrice , CurrencyCode; }
+
+
+  determination SetCustomerId on modify { create; }
+  determination SetBookingNumber on save { create; }
+  validation ValidateFlightDate on save { field FlightDate;}
+  //determination ReCalcTotalPrice  on modify { create; delete; update; }
+
+  //Side Effect to update the UI element Total Price when the field FlightPrice is changed
+ validation validateFlightNumber on save { field ConnectionId; create; update; }
+  side effects
+  {
+    field FlightPrice affects field _Travel.TotalPrice;
+   action UploadData affects $self, messages;
+   entity _supplement affects field _Travel.TotalPrice;
+}
+
+  mapping for zmsbooking
+    {
+      BookingUuid        = booking_uuid;
+      TravelUuid         = travel_uuid;
+      BookingId          = booking_id;
+      BookingDate        = booking_date;
+      CustomerId         = customer_id;
+      CarrierId          = carrier_id;
+      ConnectionId       = connection_id;
+      FlightDate         = flight_date;
+      FlightPrice        = flight_price;
+      CurrencyCode       = currency_code;
+      BookingStatus      = booking_status;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LastChangedAt      = last_changed_at;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}
+
+define behavior for ZR_MSATTACH alias zrmsattach
+persistent table zms_attachment
+draft table zms_attachment_d
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LocalLastChangedAt
+{
+
+  field ( numbering : managed, readonly )
+  AttachUuid;
+
+  field ( readonly )
+  TravelUuid,
+  CreatedAt,
+  CreatedBy,
+  LastChangedAt,
+  LastChangedBy,
+  LocalLastChangedAt;
+
+  association _Travel { with draft; }
+
+  update;
+  delete;
+
+  mapping for zms_attachment
+    {
+      AttachUuid         = attach_uuid;
+      TravelUuid         = travel_uuid;
+      Attachment         = attachment;
+      MimeType           = mime_type;
+      FileName           = file_name;
+      CreatedBy          = created_by;
+      CreatedAt          = created_at;
+      LastChangedBy      = last_changed_by;
+      LastChangedAt      = last_changed_at;
+      LocalLastChangedAt = local_last_changed_at;
+    }
+}
+
+// Supplement
+define behavior for ZR_MSSUPPLEMENT alias zrmssupplement
+persistent table zms_booksp
+draft table zms_booksp_d
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LastChangedAt
+{
+
+  field ( numbering : managed, readonly )
+  SupplementUuid;
+
+  field ( readonly )
+  TravelUuid,
+  BookingUuid,
+  LastChangedAt;
+
+  association _Booking { with draft; }
+  association _Travel { with draft; }
+
+  update;
+  delete;
+
+determination CalculateTotalPrice on modify { create; update; delete; }
+//side effects
+//  {
+//    field Price affects field _Travel.TotalPrice;
+//    //action delete affects field _Travel.TotalPrice;
+//  }
+//determination ReCalcTotalPrice  on modify { create; update; delete; }
+  mapping for zms_booksp
+    {
+      SupplementUuid = supplement_uuid;
+      TravelUuid     = travel_uuid;
+      BookingUuid    = booking_uuid;
+      SupplementId   = supplement_id;
+      Price          = price;
+      CurrencyCode   = currency_code;
+      LastChangedAt  = last_changed_at;
+    }
+}
