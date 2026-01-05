@@ -34,8 +34,8 @@ CLASS lhc_zrmstravel DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS SetStatusToRejected FOR MODIFY
       IMPORTING keys FOR ACTION zrmstravel~SetStatusToRejected RESULT result.
 
-METHODS CalculateTotalPrice FOR DETERMINE ON MODIFY
-IMPORTING keys FOR zrmstravel~CalculateTotalPrice.
+    METHODS CalculateTotalPrice FOR DETERMINE ON MODIFY
+      IMPORTING keys FOR zrmstravel~CalculateTotalPrice.
 
     METHODS SetStatusToOpen FOR DETERMINE ON MODIFY
       IMPORTING keys FOR zrmstravel~SetStatusToOpen.
@@ -48,7 +48,6 @@ IMPORTING keys FOR zrmstravel~CalculateTotalPrice.
 
     METHODS ValidateDates FOR VALIDATE ON SAVE
       IMPORTING keys FOR zrmstravel~ValidateDates.
-
 
 ENDCLASS.
 
@@ -161,7 +160,6 @@ CLASS lhc_zrmstravel IMPLEMENTATION.
              TO new_travels ASSIGNING FIELD-SYMBOL(<new_travel>).
 
       "%CID_REF - Specifies reference to content ID. If need to refer header and child record then %CID_REF is populated with header %CID value.
-      " Fill %cid of travel as instance identifier for %cid_ref of cba booking
       APPEND VALUE #( %cid_ref = keys[ KEY draft
                                        %tky = <travel>-%tky ]-%cid )
              TO new_bookings ASSIGNING FIELD-SYMBOL(<bookings_cba>).
@@ -210,12 +208,12 @@ CLASS lhc_zrmstravel IMPLEMENTATION.
     LOOP AT keys_with_valid_discount ASSIGNING FIELD-SYMBOL(<key_with_valid_discount>)
          WHERE %param-discount_percent IS INITIAL OR %param-discount_percent > 100 OR %param-discount_percent <= 0.
 
-      " report invalid discount value appropriately
+      " report invalid discount value properly
       APPEND VALUE #( %tky = <key_with_valid_discount>-%tky ) TO failed-zrmstravel.
 
       APPEND VALUE #( %tky                       = <key_with_valid_discount>-%tky
                       %msg                       = new_message_with_text("NEW /dmo/cm_flight_messages(
-                                                           "textid   = /dmo/cm_flight_messages=>discount_invalid
+
                                                      text   =   'Invalid Discount! Please enter a value b/w 1 & 100.'
                                                            severity = if_abap_behv_message=>severity-error )
                       %element-TotalPrice        = if_abap_behv=>mk-on  " Indicates the exact field or element within a BO instance that caused an error.
@@ -332,18 +330,8 @@ CLASS lhc_zrmstravel IMPLEMENTATION.
 
       CLEAR <fs_travel>-TotalPrice.
       LOOP AT amount_per_currencycode INTO DATA(single_amount_per_currencycode).
-        " If needed do a Currency Conversion
-        " IF single_amount_per_currencycode-currency_code = <fs_travel>-CurrencyCode.
         <fs_travel>-TotalPrice += single_amount_per_currencycode-amount.
-        "  ELSE.
-*          /dmo/cl_flight_amdp=>convert_currency(
-*            EXPORTING iv_amount               = single_amount_per_currencycode-amount
-*                      iv_currency_code_source = single_amount_per_currencycode-currency_code
-*                      iv_currency_code_target = <fs_travel>-CurrencyCode
-*                      iv_exchange_rate_date   =  '20251201' "cl_abap_context_info=>get_system_date( )
-*            IMPORTING ev_amount               = DATA(total_booking_price_per_curr) ).
-*          <fs_travel>-TotalPrice += total_booking_price_per_curr.
-*        ENDIF.
+
       ENDLOOP.
 
     ENDLOOP.
@@ -355,7 +343,6 @@ CLASS lhc_zrmstravel IMPLEMENTATION.
                            %tky       = travel-%tky
                            TotalPrice = travel-TotalPrice
                        ) ).
-        "   WITH CORRESPONDING #( lt_travels ).
   ENDMETHOD.
 
   METHOD SetStatusToAccepted.
@@ -402,7 +389,7 @@ CLASS lhc_zrmstravel IMPLEMENTATION.
                         %param = travel ) ).
   ENDMETHOD.
 
-Method CalculateTotalPrice.
+  METHOD CalculateTotalPrice.
     MODIFY ENTITIES OF zr_mstravel IN LOCAL MODE
             ENTITY zrmstravel
             EXECUTE ReCalcTotalPrice
@@ -415,7 +402,7 @@ Method CalculateTotalPrice.
           FIELDS ( OverallStatus )
           WITH CORRESPONDING #( keys )
           RESULT DATA(travels)
-          " TODO: variable is assigned but never used (ABAP cleaner)
+
           FAILED DATA(read_failed).
 
     " If overall travel status is already set, do nothing, i.e. remove such instances
@@ -440,7 +427,7 @@ Method CalculateTotalPrice.
   METHOD SetTravelNumber.
     DATA travel_id_max TYPE /dmo/travel_id.
 
-    " Ensure idempotence
+
     READ ENTITIES OF zr_mstravel IN LOCAL MODE
          ENTITY zrmstravel
          FIELDS ( TravelID )
@@ -640,8 +627,8 @@ CLASS lhc_zrmsbooking DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR zrmsbooking RESULT result.
 
-     METHODS CalculateTotalPrice FOR DETERMINE ON MODIFY
-     IMPORTING keys FOR zrmsbooking~CalculateTotalPrice.
+    METHODS CalculateTotalPrice FOR DETERMINE ON MODIFY
+      IMPORTING keys FOR zrmsbooking~CalculateTotalPrice.
 
     METHODS SetCustomerId FOR DETERMINE ON MODIFY
       IMPORTING keys FOR zrmsbooking~SetCustomerId.
@@ -653,10 +640,7 @@ CLASS lhc_zrmsbooking DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR zrmsbooking~validateFlightNumber.
 
     METHODS validate_flight_date FOR VALIDATE ON SAVE
-    IMPORTING keys FOR zrmsbooking~validateflightdate.
-
-*    METHODS recalc_totalprice FOR DETERMINE ON MODIFY
-*      IMPORTING keys FOR  zrmsbooking~ReCalcTotalPrice.
+      IMPORTING keys FOR zrmsbooking~validateflightdate.
 
 ENDCLASS.
 
@@ -669,66 +653,51 @@ CLASS lhc_zrmsbooking IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD CalculateTotalPrice.
-    " Read all travels for the requested bookings
-    " If multiple bookings of the same travel are requested, the travel is returned only once.
-*    READ ENTITIES OF zr_mstravel IN LOCAL MODE
-*         ENTITY zrmsbooking BY \_Travel
-*         FIELDS ( TravelUUID )
-*         WITH CORRESPONDING #( keys )
-*         RESULT DATA(lt_travels).
+    DATA travels TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
+
+    " 1. Loop through the keys of the deleted/modified bookings
+    LOOP AT keys INTO DATA(ls_key).
+
+      " 2.  TravelUUID from the Draft Table (zmsbooking_d)
+      "    Even if we are deleting it, the DB record usually still exists at this split second)
+      SELECT SINGLE traveluuid
+        FROM zmsbooking_d
+        WHERE bookinguuid = @ls_key-Bookinguuid
+        INTO @DATA(lv_travel_uuid).
+
+*    " 3. If not found in Draft, try the Active Table
+      IF sy-subrc <> 0.
+        SELECT SINGLE travel_uuid
+          FROM zmsbooking
+          WHERE booking_uuid = @ls_key-BookingUuid
+          INTO @lv_travel_uuid.
+      ENDIF.
 *
-*    " update involved instances
-*    MODIFY ENTITIES OF zr_mstravel IN LOCAL MODE
-*           ENTITY zrmstravel
-*           EXECUTE recalctotalprice
-*           FROM CORRESPONDING #( lt_travels ).
-  "ENDMETHOD.
-" 12/28/2025"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-DATA travels TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
+      " 4. If we found a parent, add it to the list to be updated
+      IF lv_travel_uuid IS NOT INITIAL.
+        APPEND VALUE #( %tky-TravelUuid = lv_travel_uuid
+                        %tky-%is_draft  = ls_key-%is_draft ) " Preserve draft state
+               TO travels.
+      ENDIF.
+    ENDLOOP.
+*
+    " 5. Trigger the Parent Calculation ONLY if we found valid parents
+    IF travels IS NOT INITIAL.
+      " Sort and delete duplicates to prevent calculating the same parent twice
+      SORT travels BY %tky.
+      DELETE ADJACENT DUPLICATES FROM travels COMPARING %tky.
 
-  " 1. Loop through the keys of the deleted/modified bookings
-  LOOP AT keys INTO DATA(ls_key).
-
-    " 2. Try to 'rescue' the TravelUUID from the Draft Table (zmsbooking_d)
-    "    (Even if we are deleting it, the DB record usually still exists at this split second)
-    SELECT single traveluuid
-      FROM zmsbooking_d
-      WHERE bookinguuid = @ls_key-Bookinguuid
-      INTO @DATA(lv_travel_uuid).
-
-*    " 3. If not found in Draft, try the Active Table (fallback)
-    IF sy-subrc <> 0.
-      SELECT SINGLE travel_uuid
-        FROM zmsbooking
-        WHERE booking_uuid = @ls_key-BookingUuid
-        INTO @lv_travel_uuid.
+      " Execute the action on the Parent
+      MODIFY ENTITIES OF zr_mstravel IN LOCAL MODE
+        ENTITY zrmstravel
+        EXECUTE ReCalcTotalPrice
+        FROM travels.
     ENDIF.
-*
-    " 4. If we found a parent, add it to the list to be updated
-    IF lv_travel_uuid IS NOT INITIAL.
-      APPEND VALUE #( %tky-TravelUuid = lv_travel_uuid
-                      %tky-%is_draft  = ls_key-%is_draft ) " Preserve draft state
-             TO travels.
-    ENDIF.
-  ENDLOOP.
-*
-  " 5. Trigger the Parent Calculation ONLY if we found valid parents
-  IF travels IS NOT INITIAL.
-    " Sort and delete duplicates to prevent calculating the same parent twice
-    SORT travels BY %tky.
-    DELETE ADJACENT DUPLICATES FROM travels COMPARING %tky.
-
-    " Execute the action on the Parent
-    MODIFY ENTITIES OF zr_mstravel IN LOCAL MODE
-      ENTITY zrmstravel
-      EXECUTE ReCalcTotalPrice
-      FROM travels.
-  ENDIF.
   ENDMETHOD.
   METHOD SetCustomerId.
     READ ENTITIES OF zr_mstravel IN LOCAL MODE
           ENTITY zrmsbooking BY \_Travel
-          ALL FIELDS " FIELDS ( CustomerId )
+          ALL FIELDS
           WITH CORRESPONDING #( keys )
           RESULT DATA(travels).
 
@@ -849,31 +818,6 @@ DATA travels TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
     ENDLOOP.
   ENDMETHOD.
 
-
-
-*"To triggere Supplements
-
-*CLASS lhc_zrmssupplement IMPLEMENTATION.
-*  METHOD recalc_totalprice.
-*    READ ENTITIES OF zr_mstravel IN LOCAL MODE
-*      ENTITY zrmssupplement BY \_Travel
-*        FIELDS ( TravelUuid )
-*        WITH CORRESPONDING #( keys )
-*      RESULT DATA(supplements).
-*
-**    IF supplements IS INITIAL.
-**      RETURN.
-**    ENDIF.
-*    SORT supplements BY TravelUuid.
-*    DELETE ADJACENT DUPLICATES FROM supplements COMPARING TravelUuid.
-*
-*    MODIFY ENTITIES OF zr_mstravel IN LOCAL MODE
-*      ENTITY zrmstravel
-*        EXECUTE ReCalcTotalPrice
-*        FROM VALUE #( FOR travel IN supplements
-*                      ( %tky-TravelUuid = travel-TravelUuid ) ).
-*  ENDMETHOD.
-*
 ENDCLASS.
 
 CLASS lhc_zrmssupplement DEFINITION INHERITING FROM cl_abap_behavior_handler.
@@ -901,19 +845,16 @@ CLASS lhc_zrmssupplement IMPLEMENTATION.
       EXECUTE ReCalcTotalPrice
       FROM CORRESPONDING #( travels ).
 
-DATA trip TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
+    DATA trip TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
 
     LOOP AT keys INTO DATA(ls_key).
 
-      " 1. Try to find the Parent in the DRAFT table first
-      "    (Note: Your draft table 'zms_booksp_d' uses column names WITHOUT underscores)
       SELECT SINGLE traveluuid
         FROM zms_booksp_d
         WHERE supplementuuid = @ls_key-SupplementUuid
         INTO @DATA(lv_travel_uuid).
 
-      " 2. If not found, try the ACTIVE table as a fallback
-      "    (Note: Your active table 'zms_booksp' uses column names WITH underscores)
+
       IF sy-subrc <> 0.
         SELECT SINGLE travel_uuid
           FROM zms_booksp
@@ -927,7 +868,6 @@ DATA trip TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
                         %tky-%is_draft  = ls_key-%is_draft )
                TO trip.
       ENDIF.
-
     ENDLOOP.
 
     " 4. Trigger the Parent to Recalculate
@@ -943,5 +883,5 @@ DATA trip TYPE TABLE FOR ACTION IMPORT zr_mstravel~ReCalcTotalPrice.
         FROM trip.
     ENDIF.
 
-     ENDMETHOD.
+  ENDMETHOD.
 ENDCLASS.
