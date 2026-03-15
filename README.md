@@ -17,3 +17,4 @@ Key Features:
 7. Copy Past Trips: To save time, users can click a "Copy" button to instantly duplicate an old trip (including all its flights and extras) to create a new one.
 8. Apply Discounts: Managers have a custom action button to quickly apply a percentage discount to the agency booking fee.
 9. Automatic Database Cleanup: If a user deletes a travel request, the system is smart enough to automatically delete all the attached flights and files so the database stays perfectly clean.
+
